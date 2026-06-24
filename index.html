@@ -256,8 +256,8 @@ let flt={brand:null,cat:null,maker:null,year:null,q:''};
 function renderGallery(){
   const cats=[...new Set(prods.map(p=>p.cat))];
   const makers=[...new Set(prods.map(p=>p.maker))].filter(m=>prods.filter(p=>p.maker===m).length>=2);
-  const years=['2024','2025','2026'];
-  app.innerHTML=`<h2 class="sec"><b>제품 갤러리</b> · 145건</h2><div class="sub">태그를 눌러 브랜드·제품군·제조사·연도로 좁혀 보세요. 카드를 누르면 상세.</div>
+  const years=[...new Set(prods.map(p=>p.year))].filter(Boolean).sort().reverse();
+  app.innerHTML=`<h2 class="sec"><b>제품 갤러리</b> · ${prods.length}건</h2><div class="sub">태그를 눌러 브랜드·제품군·제조사·연도로 좁혀 보세요. 카드를 누르면 상세. (RRA 2020~2026)</div>
    <div class="filters">
      <div class="frow"><span class="lab">검색</span><input id="searchbox" placeholder="모델·기기명 검색" oninput="flt.q=this.value;paintG()"></div>
      <div class="frow"><span class="lab">브랜드</span>${brand_order.map(b=>`<span class="chip" data-k="brand" data-v="${b}">${b}</span>`).join('')}</div>
