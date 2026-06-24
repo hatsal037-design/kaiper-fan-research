@@ -144,12 +144,13 @@ function renderRel(){
 }
 function drawLines(ed){
   const wrap=document.getElementById('relwrap'),svg=document.getElementById('rsvg');if(!wrap||!ed)return;
+  const cols=wrap.querySelector('.relcols');if(!cols)return;
   const wr=wrap.getBoundingClientRect();svg.innerHTML='';
   const maxc=Math.max(1,...Object.values(ed).flatMap(o=>Object.values(o)));
   Object.entries(ed).forEach(([b,o])=>{
-    const bn=wrap.querySelector(`[data-b="${b}"]`);if(!bn)return;const br=bn.getBoundingClientRect();
+    const bn=cols.querySelector(`[data-b="${b}"]`);if(!bn)return;const br=bn.getBoundingClientRect();
     const x1=br.right-wr.left,y1=br.top-wr.top+br.height/2;
-    Object.entries(o).forEach(([f,cnt])=>{const fn=wrap.querySelector(`[data-f="${f}"]`);if(!fn)return;const fr=fn.getBoundingClientRect();
+    Object.entries(o).forEach(([f,cnt])=>{const fn=cols.querySelector(`[data-f="${f}"]`);if(!fn)return;const fr=fn.getBoundingClientRect();
       const x2=fr.left-wr.left,y2=fr.top-wr.top+fr.height/2;const mx=(x1+x2)/2;
       const w=(1+(cnt/maxc)*2.8).toFixed(1);
       const p=document.createElementNS('http://www.w3.org/2000/svg','path');
@@ -163,7 +164,7 @@ function drawLines(ed){
 }
 function hl(t,v){const svg=document.getElementById('rsvg');const wrap=document.getElementById('relwrap');
   svg.querySelectorAll('path').forEach(p=>{const m=p.dataset[t]===v;p.setAttribute('opacity',m?'.95':'.07');p.setAttribute('stroke-width',m?(+p.dataset.w+0.8):p.dataset.w);
-    if(m){wrap.querySelector(`[data-${t==='b'?'f':'b'}="${p.dataset[t==='b'?'f':'b']}"]`)?.classList.add('hot');}});}
+    if(m){wrap.querySelector(`.relcols [data-${t==='b'?'f':'b'}="${p.dataset[t==='b'?'f':'b']}"]`)?.classList.add('hot');}});}
 function clr(){const svg=document.getElementById('rsvg');svg.querySelectorAll('path').forEach(p=>{p.setAttribute('opacity','.5');p.setAttribute('stroke-width',p.dataset.w);});
   document.querySelectorAll('.node.hot').forEach(n=>n.classList.remove('hot'));}
 window.addEventListener('resize',()=>{if(curTab==='rel')drawLines(_ed);});
