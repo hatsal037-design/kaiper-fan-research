@@ -135,7 +135,7 @@ function renderRel(){
   const chips=cats.map(c=>{const n=c==='전체'?prods.length:prods.filter(p=>p.cat===c).length;const col=catColor[c]||'#16181d';
     return `<span class="chip ${c===relCat?'on':''}" style="${c===relCat?'':'border-left:3px solid '+col}" onclick="relCat='${c}';renderRel()">${c} <b>${n}</b></span>`;}).join('');
   const tbadge=b=>{const t=(brands[b]||{}).tier;if(!t)return '';return `<span class="tb tb${t==='·'?'F':t}">${t}</span>`;};
-  const bcol=activeBrands.length?activeBrands.map(b=>`<div class="node" onclick="openBrand('${b}')" data-b="${b}"><span class="rk">#${(brands[b]||{}).rank||'?'}</span>${tbadge(b)}${b}<small>${Object.values(ed[b]).reduce((a,x)=>a+x,0)}건 · 공장 ${Object.keys(ed[b]).length}곳</small></div>`).join(''):'<div class="sub" style="padding:18px">해당 제품군 브랜드 없음</div>';
+  const bcol=activeBrands.length?activeBrands.map(b=>`<div class="node" onclick="openBrand('${b}',relCat)" data-b="${b}"><span class="rk">#${(brands[b]||{}).rank||'?'}</span>${tbadge(b)}${b}<small>${Object.values(ed[b]).reduce((a,x)=>a+x,0)}건 · 공장 ${Object.keys(ed[b]).length}곳</small></div>`).join(''):'<div class="sub" style="padding:18px">해당 제품군 브랜드 없음</div>';
   const fcol=facList.map(f=>{const maj=['Topsharp','Pioneer','Naeol','Hebron','Lele Duo','Yifeng','Aohai'].includes(f);const prof=facs[f];
     return `<div class="node fac ${maj?'major':''}" onclick="openFac('${f}')" data-f="${f}">${f}<small>${facCnt[f]}건 · ${prof?(prof.spec||'').slice(0,14):'프로필 미상'}</small></div>`;}).join('');
   app.innerHTML=`<h2 class="sec"><b>관계도</b> — 제품군별 브랜드 ↔ 제조공장</h2>
@@ -201,20 +201,27 @@ function paint(){const cur=stack[stack.length-1];
 function popDw(){stack.pop();paint();}
 function closeDw(){document.getElementById('dw').classList.remove('open');document.getElementById('ov').style.display='none';stack=[];}
 function newDw(h,b){stack=[];pushDw(h,b);}
+function showDw(h,b){const dw=document.getElementById('dw');(dw&&dw.classList.contains('open'))?pushDw(h,b):newDw(h,b);}
 
 /* 브랜드 상세 */
-function openBrand(b){const bd=brands[b];const cats=brandCats(b),fcs=brandFacs(b);
-  const head=`<div class="en">${bd.en}</div><div class="ti">${b}</div>`;
-  let body=`<div class="kv"><span class="k">한국 법인</span><span class="v">${bd.corp}</span></div>
+function openBrand(b,scope){const bd=brands[b];
+  const sc=scope&&scope!=='전체'?scope:null;
+  const inScope=p=>p.brand===b&&(!sc||p.cat===sc);
+  const cats={},fcs={};prods.forEach(p=>{if(!inScope(p))return;cats[p.cat]=(cats[p.cat]||0)+1;fcs[p.maker]=(fcs[p.maker]||0)+1;});
+  const n=Object.values(cats).reduce((a,x)=>a+x,0);
+  const isFan=!sc||sc==='선풍기·팬';
+  const head=`<div class="en">${bd.en}</div><div class="ti"><span class="rk">#${bd.rank}</span>${b}</div>`;
+  const scopeBar=sc?`<div class="kv" style="background:#e7f7fd;border-radius:7px;padding:7px 10px;margin-bottom:6px"><span class="k" style="color:#0089b8;font-weight:700">📁 ${sc} 카테고리만</span><span class="v"><span style="cursor:pointer;color:#0089b8;font-weight:700;text-decoration:underline" onclick="openBrand('${b}')">전체 보기 ›</span></span></div>`:'';
+  let body=`${scopeBar}<div class="kv"><span class="k">한국 법인</span><span class="v">${bd.corp}</span></div>
    <div class="kv"><span class="k">정체</span><span class="v">${bd.type}</span></div>
-   <div class="kv"><span class="k">RRA 본체</span><span class="v">${bd.rraN}건 (2024~2026)</span></div>
+   <div class="kv"><span class="k">RRA 본체</span><span class="v">${sc?n+'건 ('+sc+')':bd.rraN+'건'}</span></div>
    <p style="font-size:12.5px;color:#41464e;margin-top:8px">${bd.desc}</p>
-   <h4>제품군</h4><div class="chips">${Object.entries(cats).sort((a,b)=>b[1]-a[1]).map(([c,n])=>`<span class="cbtn lock" style="border-left:3px solid ${catColor[c]}">${c} <b style="color:${catColor[c]}">${n}</b></span>`).join('')}</div>
-   <h4>선풍기/팬 폼팩터</h4><div class="chips">${bd.forms.map(f=>`<span class="cbtn lock">${f}</span>`).join('')}</div>
-   <h4>제조 공장 (누르면 공장 상세)</h4><div class="chips">${Object.entries(fcs).sort((a,b)=>b[1]-a[1]).map(([f,n])=>facs[f]?`<span class="cbtn" onclick="openFac('${f}')">${f} <b>${n}</b> ›</span>`:`<span class="cbtn lock">${f} ${n}</span>`).join('')}</div>
-   <h4>대표 제품 (시장 정보)</h4><table class="reptbl"><tr><td>모델</td><td>형태</td><td>가격</td><td>판매지표</td></tr>${bd.rep.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`).join('')}</table>
-   <h4>전체 제품 ${bd.rraN}건 — 누르면 상세</h4><div class="plist">${prods.map((p,i)=>[p,i]).filter(([p])=>p.brand===b).map(([p,i])=>`<div class="pli" onclick="openProd(${i})"><span class="d">${p.date}</span><span class="m">${p.model}</span><span class="f">${p.maker}</span></div>`).join('')}</div>`;
-  newDw(head,body);
+   <h4>제품군${sc?' (현재)':''}</h4><div class="chips">${Object.entries(cats).sort((a,b)=>b[1]-a[1]).map(([c,n])=>`<span class="cbtn lock" style="border-left:3px solid ${catColor[c]}">${c} <b style="color:${catColor[c]}">${n}</b></span>`).join('')}</div>
+   ${isFan&&bd.forms.length?`<h4>선풍기/팬 폼팩터</h4><div class="chips">${bd.forms.map(f=>`<span class="cbtn lock">${f}</span>`).join('')}</div>`:''}
+   <h4>제조 공장${sc?' · '+sc:''} (누르면 공장 상세)</h4><div class="chips">${Object.entries(fcs).sort((a,b)=>b[1]-a[1]).map(([f,n])=>facs[f]?`<span class="cbtn" onclick="openFac('${f}')">${f} <b>${n}</b> ›</span>`:`<span class="cbtn lock">${f} ${n}</span>`).join('')}</div>
+   ${isFan&&bd.rep.length?`<h4>대표 제품 (시장 정보)</h4><table class="reptbl"><tr><td>모델</td><td>형태</td><td>가격</td><td>판매지표</td></tr>${bd.rep.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`).join('')}</table>`:''}
+   <h4>${sc?sc+' 제품':'전체 제품'} ${n}건 — 누르면 상세</h4><div class="plist">${prods.map((p,i)=>[p,i]).filter(([p])=>inScope(p)).map(([p,i])=>`<div class="pli" onclick="openProd(${i})"><span class="d">${p.date}</span><span class="m">${p.model}</span><span class="f">${p.maker}</span></div>`).join('')}</div>`;
+  showDw(head,body);
 }
 /* 제조사 상세 */
 function openFac(f){const fd=facs[f]||{full:f,loc:'중국',since:'확인 불가',scale:'확인 불가',listed:'비상장',cert:'—',spec:'공개 프로필 미상',note:'RRA 인증서에 제조자로 등장. 공개 기업 프로필 미확보(소규모/비공개 추정).'};const bs=facBrands(f),cs=facCats(f);
@@ -233,7 +240,7 @@ function openFac(f){const fd=facs[f]||{full:f,loc:'중국',since:'확인 불가'
    <div class="kv"><span class="k">특화</span><span class="v">${fd.spec}</span></div>
    ${fd.note?`<div class="note">${fd.note}</div>`:''}
    <h4>이 공장의 제품 ${Object.values(bs).reduce((a,b)=>a+b,0)}건</h4><div class="plist">${prods.map((p,i)=>[p,i]).filter(([p])=>p.maker===f).map(([p,i])=>`<div class="pli" onclick="openProd(${i})"><span class="d">${p.date}</span><span class="m">${p.model}</span><span class="f">${p.brand}</span></div>`).join('')}</div>`;
-  newDw(head,body);
+  showDw(head,body);
 }
 /* 제품 상세 */
 function openProd(i){const p=prods[i];
