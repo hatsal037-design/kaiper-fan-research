@@ -47,6 +47,7 @@ h2.sec{font-size:20px;font-weight:800;margin:4px 0 4px}h2.sec b{color:var(--sky)
 .frow .lab{font-size:11px;font-weight:800;color:var(--mut);width:54px}
 .chip{font-size:11.5px;border:1px solid var(--line);background:#fff;border-radius:20px;padding:4px 11px;cursor:pointer;font-weight:600}
 .chip.on{background:var(--sky);border-color:var(--sky);color:#06222b}
+.chip.dis{opacity:.22;pointer-events:none;background:#f6f7f9}
 .chip:hover:not(.on){border-color:var(--sky)}
 #searchbox{flex:1;min-width:140px;border:1px solid var(--line);border-radius:20px;padding:5px 13px;font-size:12.5px;outline:none}
 .count{font-size:12px;color:var(--mut);margin:4px 2px 12px}
@@ -271,7 +272,13 @@ function renderGallery(){
   paintG();
 }
 function paintG(){
-  let list=prods.map((p,i)=>[p,i]).filter(([p])=>(!flt.brand||p.brand===flt.brand)&&(!flt.cat||p.cat===flt.cat)&&(!flt.maker||p.maker===flt.maker)&&(!flt.year||p.year===flt.year)&&(!flt.q||(p.model+p.equip).toLowerCase().includes(flt.q.toLowerCase())));
+  const match=(p,skip)=>(skip==='brand'||!flt.brand||p.brand===flt.brand)&&(skip==='cat'||!flt.cat||p.cat===flt.cat)&&(skip==='maker'||!flt.maker||p.maker===flt.maker)&&(skip==='year'||!flt.year||p.year===flt.year)&&(!flt.q||(p.model+p.equip).toLowerCase().includes(flt.q.toLowerCase()));
+  let list=prods.map((p,i)=>[p,i]).filter(([p])=>match(p,null));
+  // 교차 필터: 각 분류축에서 현재 선택과 함께 결과가 나오는 값만 활성화
+  ['brand','cat','maker','year'].forEach(dim=>{
+    const avail=new Set(prods.filter(p=>match(p,dim)).map(p=>p[dim]));
+    app.querySelectorAll(`.chip[data-k="${dim}"]`).forEach(c=>c.classList.toggle('dis',!avail.has(c.dataset.v)&&flt[dim]!==c.dataset.v));
+  });
   document.getElementById('gcount').textContent=`${list.length}건 표시`;
   document.getElementById('ggrid').innerHTML=list.map(([p,i])=>`<div class="pc" onclick="openProd(${i})">
     <div class="pcat" style="color:${catColor[p.cat]}">${p.cat}</div>
