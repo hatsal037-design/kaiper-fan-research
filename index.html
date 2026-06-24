@@ -34,10 +34,16 @@ h2.sec{font-size:20px;font-weight:800;margin:4px 0 4px}h2.sec b{color:var(--sky)
 .relcols{position:relative;display:flex;justify-content:space-between;z-index:2}
 .relcol{display:flex;flex-direction:column;gap:9px;width:44%}
 .relcol .h{font-size:12px;font-weight:800;color:var(--mut);text-align:center;margin-bottom:3px}
-.node{background:#f2f4f7;border:1.5px solid #dfe3e8;border-radius:9px;padding:9px 11px;font-weight:700;font-size:13px;cursor:pointer;transition:.12s;text-align:center}
+.node{position:relative;background:#f2f4f7;border:1.5px solid #dfe3e8;border-radius:9px;padding:9px 11px 9px 30px;font-weight:700;font-size:13px;cursor:pointer;transition:.12s;text-align:center}
+.nck{position:absolute;left:9px;top:50%;transform:translateY(-50%);width:16px;height:16px;cursor:pointer;accent-color:var(--sky);margin:0;z-index:2}
 .tb{display:inline-block;min-width:14px;padding:0 4px;border-radius:5px;font-size:10px;font-weight:800;margin-right:5px;vertical-align:middle;color:#fff}
 .tbS{background:#e8820e}.tbA{background:#00befa}.tbB{background:#868e96}.tbC{background:#ced4da;color:#495057}.tbF{background:#f1f3f5;color:#adb5bd}
 .rk{color:#9097a0;font-weight:800;font-size:11px;margin-right:4px}
+.node.gone{display:none}
+.node.sel{outline:2px solid var(--sky);outline-offset:-2px;background:#e7f7fd}
+#isobar{display:none;align-items:center;gap:10px;flex-wrap:wrap;background:#16181d;color:#fff;border-radius:8px;padding:8px 13px;margin-bottom:12px;font-size:12px}
+#isobar .iobtn{cursor:pointer;background:var(--sky);color:#06222b;padding:4px 10px;border-radius:6px;font-weight:700}
+#isobar .iobtn.alt{background:#3a3f47;color:#fff}
 .node:hover,.node.hot{background:var(--sky);border-color:var(--sky);color:#06222b}
 .node.fac{font-size:12px}.node.major{border-color:#9aa0a8}
 .node small{display:block;font-size:9.5px;color:var(--mut);font-weight:500}
@@ -135,17 +141,37 @@ function renderRel(){
   const chips=cats.map(c=>{const n=c==='전체'?prods.length:prods.filter(p=>p.cat===c).length;const col=catColor[c]||'#16181d';
     return `<span class="chip ${c===relCat?'on':''}" style="${c===relCat?'':'border-left:3px solid '+col}" onclick="relCat='${c}';renderRel()">${c} <b>${n}</b></span>`;}).join('');
   const tbadge=b=>{const t=(brands[b]||{}).tier;if(!t)return '';return `<span class="tb tb${t==='·'?'F':t}">${t}</span>`;};
-  const bcol=activeBrands.length?activeBrands.map(b=>`<div class="node" onclick="openBrand('${b}',relCat)" data-b="${b}"><span class="rk">#${(brands[b]||{}).rank||'?'}</span>${tbadge(b)}${b}<small>${Object.values(ed[b]).reduce((a,x)=>a+x,0)}건 · 공장 ${Object.keys(ed[b]).length}곳</small></div>`).join(''):'<div class="sub" style="padding:18px">해당 제품군 브랜드 없음</div>';
+  const bcol=activeBrands.length?activeBrands.map(b=>`<div class="node" data-b="${b}" onclick="openBrand('${b}',relCat)"><input type="checkbox" class="nck" onclick="event.stopPropagation();relToggle('b','${b}',this.checked)"><span class="rk">#${(brands[b]||{}).rank||'?'}</span>${tbadge(b)}${b}<small>${Object.values(ed[b]).reduce((a,x)=>a+x,0)}건 · 공장 ${Object.keys(ed[b]).length}곳</small></div>`).join(''):'<div class="sub" style="padding:18px">해당 제품군 브랜드 없음</div>';
   const fcol=facList.map(f=>{const maj=['Topsharp','Pioneer','Naeol','Hebron','Lele Duo','Yifeng','Aohai'].includes(f);const prof=facs[f];
-    return `<div class="node fac ${maj?'major':''}" onclick="openFac('${f}')" data-f="${f}"><span class="rk">#${(facs[f]||{}).rank||'?'}</span>${f}<small>${facCnt[f]}건 · ${prof?(prof.spec||'').slice(0,14):'프로필 미상'}</small></div>`;}).join('');
+    return `<div class="node fac ${maj?'major':''}" data-f="${f}" onclick="openFac('${f}')"><input type="checkbox" class="nck" onclick="event.stopPropagation();relToggle('f','${f}',this.checked)"><span class="rk">#${(facs[f]||{}).rank||'?'}</span>${f}<small>${facCnt[f]}건 · ${prof?(prof.spec||'').slice(0,14):'프로필 미상'}</small></div>`;}).join('');
+  relSel=new Set();
   app.innerHTML=`<h2 class="sec"><b>관계도</b> — 제품군별 브랜드 ↔ 제조공장</h2>
-   <div class="sub">제품군을 골라 그 분야의 연결만 따로 보세요. 이름 클릭 → 상세, 마우스 올리면 연결선 강조. 선 굵기 = 제품 수. (RRA 2024~2026)</div>
-   <div class="frow" style="margin-bottom:14px">${chips}</div>
+   <div class="sub">제품군을 고르고, 브랜드/제조사 <b>이름을 클릭하면 연결된 것만 남겨요</b>(다시 누르면 복원). 선 굵기 = 제품 수. (RRA 2024~2026)</div>
+   <div class="frow" style="margin-bottom:10px">${chips}</div>
+   <div id="isobar"></div>
    <div id="relwrap"><svg id="rsvg"></svg><div class="relcols">
      <div class="relcol"><div class="h">한국 브랜드 (${activeBrands.length})</div>${bcol}</div>
      <div class="relcol"><div class="h">중국 제조공장 (${facList.length})</div>${fcol}</div>
    </div></div>`;
-  requestAnimationFrame(()=>drawLines(_ed));
+  requestAnimationFrame(()=>applyIso());
+}
+let relSel=new Set();
+function relToggle(type,id,on){const k=type+':'+id;on?relSel.add(k):relSel.delete(k);applyIso();}
+function relReset(){relSel=new Set();document.querySelectorAll('.relcols .nck').forEach(c=>c.checked=false);applyIso();}
+function applyIso(){
+  const cols=document.querySelector('.relcols');if(!cols)return;
+  const bar=document.getElementById('isobar');
+  if(!relSel.size){cols.querySelectorAll('.node').forEach(n=>n.classList.remove('gone','sel'));if(bar)bar.style.display='none';drawLines(_ed);return;}
+  // 체크된 노드와 연결된 것 합집합
+  const fed={},keepB=new Set(),keepF=new Set();
+  Object.entries(_ed).forEach(([b,o])=>Object.entries(o).forEach(([f,n])=>{
+    if(relSel.has('b:'+b)||relSel.has('f:'+f)){(fed[b]=fed[b]||{})[f]=n;keepB.add(b);keepF.add(f);}
+  }));
+  relSel.forEach(k=>{k[0]==='b'?keepB.add(k.slice(2)):keepF.add(k.slice(2));});
+  cols.querySelectorAll('[data-b]').forEach(n=>{n.classList.toggle('gone',!keepB.has(n.dataset.b));n.classList.toggle('sel',relSel.has('b:'+n.dataset.b));});
+  cols.querySelectorAll('[data-f]').forEach(n=>{n.classList.toggle('gone',!keepF.has(n.dataset.f));n.classList.toggle('sel',relSel.has('f:'+n.dataset.f));});
+  drawLines(fed);
+  if(bar){bar.style.display='flex';bar.innerHTML=`<span>🔍 체크 ${relSel.size}개 — 연결만 표시 (브랜드 ${keepB.size}·공장 ${keepF.size})</span><span class="iobtn alt" onclick="relReset()">✕ 전체 해제</span>`;}
 }
 function drawLines(ed){
   const wrap=document.getElementById('relwrap'),svg=document.getElementById('rsvg');if(!wrap||!ed)return;
@@ -172,7 +198,7 @@ function hl(t,v){const svg=document.getElementById('rsvg');const wrap=document.g
     if(m){wrap.querySelector(`.relcols [data-${t==='b'?'f':'b'}="${p.dataset[t==='b'?'f':'b']}"]`)?.classList.add('hot');}});}
 function clr(){const svg=document.getElementById('rsvg');svg.querySelectorAll('path').forEach(p=>{p.setAttribute('opacity','.5');p.setAttribute('stroke-width',p.dataset.w);});
   document.querySelectorAll('.node.hot').forEach(n=>n.classList.remove('hot'));}
-window.addEventListener('resize',()=>{if(curTab==='rel')drawLines(_ed);});
+window.addEventListener('resize',()=>{if(curTab==='rel')applyIso();});
 
 /* ---------- 브랜드 그리드 ---------- */
 function renderBrands(){
