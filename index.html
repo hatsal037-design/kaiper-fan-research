@@ -60,6 +60,13 @@ h2.sec{font-size:20px;font-weight:800;margin:4px 0 4px}h2.sec b{color:var(--sky)
 .count{font-size:12px;color:var(--mut);margin:4px 2px 12px}
 /* product card */
 .pc{background:#fff;border:1px solid var(--line);border-radius:11px;padding:12px 13px;cursor:pointer;transition:.12s}
+.pthumb{position:relative;width:100%;aspect-ratio:4/3;border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;margin-bottom:9px}
+.pthumb.big{aspect-ratio:16/9;margin-bottom:12px}
+.pthumb img{width:100%;height:100%;object-fit:cover}
+.pthumb .pemoji{font-size:34px;align-items:center;justify-content:center;width:100%;height:100%;display:flex}
+.pthumb.big .pemoji{font-size:54px}
+.shop{font-size:10.5px;color:#03c75a;font-weight:800;text-decoration:none}
+.shopbtn{display:block;margin-top:13px;background:#03c75a;color:#fff;text-align:center;padding:10px;border-radius:9px;font-weight:800;font-size:13px;text-decoration:none}
 .pc:hover{border-color:var(--sky);box-shadow:0 4px 14px rgba(0,190,250,.12)}
 .pc .pcat{font-size:10px;font-weight:800;color:var(--sky)}
 .pc .pmo{font-size:13.5px;font-weight:800;margin:2px 0 3px;line-height:1.25}
@@ -112,6 +119,11 @@ const DATA = {"prods": [{"brand": "크레모아", "date": "2025-03-04", "equip":
 const {prods,brands,facs,fac_clients,edges,brand_order,fac_order}=DATA;
 const app=document.getElementById('app');
 const catColor={'선풍기·팬':'#00befa','제습기':'#5b8def','가습기':'#28b6c8','온풍·난방':'#e8820e','주방가전':'#9b59b6','조명':'#f2b705','에어건':'#16a085','충전·전원':'#c0392b','살충·모기':'#7f8c8d','감지·모듈':'#34495e','기타':'#aeb3ba','🌱고데기':'#2f9e44','🌱드라이기/에어랩':'#37b24d','🌱제모(IPL)':'#40c057','🌱네일':'#51cf66','🌱음식물처리기':'#69db7c'};
+const catEmoji={'선풍기·팬':'🌀','제습기':'💧','가습기':'💨','온풍·난방':'🔥','주방가전':'🍳','조명':'💡','에어건':'🌬️','충전·전원':'🔌','살충·모기':'🦟','감지·모듈':'📟','기타':'📦','🌱고데기':'💇','🌱드라이기/에어랩':'💨','🌱제모(IPL)':'✨','🌱네일':'💅','🌱음식물처리기':'🍱'};
+function shopUrl(p){return 'https://search.shopping.naver.com/search/all?query='+encodeURIComponent((p.brand+' '+p.model).trim());}
+function thumb(p,big){const c=catColor[p.cat]||'#aeb3ba';const em=catEmoji[p.cat]||'📦';
+  const inner=p.img?`<img src="${p.img}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><span class="pemoji" style="display:none">${em}</span>`:`<span class="pemoji">${em}</span>`;
+  return `<div class="pthumb${big?' big':''}" style="background:linear-gradient(135deg,${c}1f,${c}3d)">${inner}</div>`;}
 // productGroups per brand
 function brandCats(b){const s={};prods.filter(p=>p.brand===b).forEach(p=>s[p.cat]=(s[p.cat]||0)+1);return s;}
 function brandFacs(b){const s={};prods.filter(p=>p.brand===b).forEach(p=>s[p.maker]=(s[p.maker]||0)+1);return s;}
@@ -271,7 +283,7 @@ function openFac(f){const fd=facs[f]||{full:f,loc:'중국',since:'확인 불가'
 /* 제품 상세 */
 function openProd(i){const p=prods[i];
   const head=`<div class="en">${p.brand} · ${p.cat}</div><div class="ti" style="font-size:15px">${p.model}</div>`;
-  let body=`<table class="reptbl">
+  let body=`${thumb(p,1)}<table class="reptbl">
    <tr><td>브랜드</td><td>${p.brand}</td></tr>
    <tr><td>기기명칭</td><td>${p.equip}</td></tr>
    <tr><td>모델명</td><td>${p.model}</td></tr>
@@ -282,6 +294,7 @@ function openProd(i){const p=prods[i];
    <tr><td>파생모델</td><td>${p.deriv?'있음 (색상·사양 변형 SKU)':'없음'}</td></tr>
    <tr><td>인증번호</td><td style="font-size:11px">${p.rr}</td></tr>
    </table>
+   <a class="shopbtn" href="${shopUrl(p)}" target="_blank" rel="noopener">🛒 네이버쇼핑에서 보기 (실제 사진·가격) ›</a>
    <div class="chips" style="margin-top:14px"><span class="cbtn" onclick="openBrand('${p.brand}')">🏷️ ${p.brand} 브랜드 ›</span>${facs[p.maker]?`<span class="cbtn" onclick="openFac('${p.maker}')">🏭 ${p.maker} 제조사 ›</span>`:''}</div>`;
   pushDw(head,body);
 }
@@ -318,10 +331,11 @@ function paintG(){
   });
   document.getElementById('gcount').textContent=`${list.length}건 표시`;
   document.getElementById('ggrid').innerHTML=list.map(([p,i])=>`<div class="pc" onclick="openProd(${i})">
+    ${thumb(p)}
     <div class="pcat" style="color:${catColor[p.cat]}">${p.cat}</div>
     <div class="pmo">${p.model}</div><div class="peq">${p.equip}</div>
     <div class="prow"><span class="tag">${p.brand}</span><span style="color:#0089b8;font-weight:700">${p.maker}</span></div>
-    <div class="prow" style="margin-top:3px;color:#9097a0"><span>${p.date}</span>${p.deriv?'<span>파생 SKU</span>':'<span></span>'}</div></div>`).join('');
+    <div class="prow" style="margin-top:3px;color:#9097a0"><span>${p.date}</span><a class="shop" href="${shopUrl(p)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">🛒 쇼핑</a></div></div>`).join('');
 }
 render();
 </script></body></html>
