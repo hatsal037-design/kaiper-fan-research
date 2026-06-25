@@ -75,6 +75,16 @@ h2.sec{font-size:20px;font-weight:800;margin:4px 0 4px}h2.sec b{color:var(--sky)
 .cth.none{display:flex;align-items:center;justify-content:center;font-size:9px;color:#9097a0;text-align:center;font-weight:700;line-height:1.2}
 .cbtnX{display:block;width:100%;background:#fff0f0;color:#c0392b;border:1.5px solid #f3c0c0;border-radius:8px;padding:9px;font-weight:800;font-size:12.5px;cursor:pointer}
 .curbtn{font-size:11.5px;background:#16181d;color:#fff;padding:4px 10px;border-radius:7px;cursor:pointer;font-weight:700;vertical-align:middle}
+.curbtn.arch-btn{background:#fff;color:#c0392b;border:1.5px solid #f3c0c0}
+.arch{display:flex;flex-direction:column;gap:8px}
+.archrow{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:9px;padding:8px}
+.archth{width:46px;height:46px;border-radius:7px;overflow:hidden;flex:0 0 auto;display:flex;align-items:center;justify-content:center;background:#f1f3f5;font-size:22px}
+.archth img{width:100%;height:100%;object-fit:cover}
+.archinfo{flex:1;min-width:0}
+.archmo{font-weight:800;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.archsub{font-size:11px;color:var(--mut)}
+.archrestore{flex:0 0 auto;background:#e7f7fd;color:#0089b8;border:1.5px solid #b3e8f7;border-radius:7px;padding:7px 11px;font-weight:800;font-size:12px;cursor:pointer}
+.archall{display:block;width:100%;margin-bottom:11px;background:#0089b8;color:#fff;border:none;border-radius:8px;padding:9px;font-weight:800;font-size:12.5px;cursor:pointer}
 .pc:hover{border-color:var(--sky);box-shadow:0 4px 14px rgba(0,190,250,.12)}
 .pc .pcat{font-size:10px;font-weight:800;color:var(--sky)}
 .pc .pmo{font-size:13.5px;font-weight:800;margin:2px 0 3px;line-height:1.25}
@@ -325,6 +335,21 @@ function pickImg(k,u){EDITS.img[k]=u;saveEdits();
   document.querySelectorAll('#dwb .cth').forEach(e=>e.classList.toggle('on',e.dataset.u===u));
   if(curTab==='gal')render();}
 function editCount(){return EDITS.excluded.length+Object.keys(EDITS.img).length;}
+function findProdByKey(k){return ALLPRODS.find(p=>pkey(p)===k);}
+function openArchive(){
+  const items=EDITS.excluded.map(findProdByKey).filter(Boolean);
+  const head=`<div class="en">큐레이션</div><div class="ti">🗑 제외함 ${items.length}</div>`;
+  const body=items.length?`<div class="sub" style="margin-bottom:11px">앱에서 제외한 제품이에요. <b>↩ 복원</b>을 누르면 다시 나타나요.</div>
+   ${items.length>1?`<button class="archall" onclick="restoreAll()">↩ 전부 복원 (${items.length})</button>`:''}
+   <div class="arch">${items.map(p=>{const im=curImg(p);return `<div class="archrow">
+     <div class="archth">${im?`<img src="${im}">`:(catEmoji[p.cat]||'📦')}</div>
+     <div class="archinfo"><div class="archmo">${p.model}</div><div class="archsub">${p.brand} · ${p.cat}</div></div>
+     <button class="archrestore" onclick="restoreProd('${pkey(p).replace(/'/g,"\\'")}')">↩ 복원</button></div>`;}).join('')}</div>`
+   :'<div class="sub" style="padding:24px 0;text-align:center">제외한 제품이 없어요.</div>';
+  newDw(head,body);
+}
+function restoreProd(k){EDITS.excluded=EDITS.excluded.filter(x=>x!==k);saveEdits();rebuildProds();render();openArchive();}
+function restoreAll(){EDITS.excluded=[];saveEdits();rebuildProds();render();openArchive();}
 function exportEdits(){const t=JSON.stringify(EDITS);navigator.clipboard&&navigator.clipboard.writeText(t);
   const r=prompt(`큐레이션 변경: 제외 ${EDITS.excluded.length}건 · 썸네일교체 ${Object.keys(EDITS.img).length}건.\n아래 내용이 클립보드에 복사됐어요 — 햇살님이 저(클로드)에게 붙여주면 영구 반영합니다.\n\n초기화하려면 'reset' 입력 후 확인:`,t);
   if(r==='reset'){EDITS={excluded:[],img:{}};saveEdits();rebuildProds();render();alert('큐레이션 초기화됨');}}
@@ -335,11 +360,11 @@ function renderGallery(){
   const cats=[...new Set(prods.map(p=>p.cat))];
   const makers=[...new Set(prods.map(p=>p.maker))].filter(m=>prods.filter(p=>p.maker===m).length>=2);
   const years=[...new Set(prods.map(p=>p.year))].filter(Boolean).sort().reverse();
-  app.innerHTML=`<h2 class="sec"><b>제품 갤러리</b> · ${prods.length}건${EDITS.excluded.length?` <span style="font-size:12px;color:#c0392b;font-weight:600">(제외 ${EDITS.excluded.length})</span>`:''} <span class="curbtn" onclick="exportEdits()">✏️ 큐레이션 ${editCount()}</span></h2><div class="sub">태그로 좁혀 보고 카드를 누르면 상세. 상세에서 <b>제외/썸네일 교체</b> 가능 (변경은 내 브라우저에 저장 → ✏️로 내보내 영구반영). (RRA 2020~2026)</div>
+  app.innerHTML=`<h2 class="sec"><b>제품 갤러리</b> · ${prods.length}건 ${EDITS.excluded.length?`<span class="curbtn arch-btn" onclick="openArchive()">🗑 제외함 ${EDITS.excluded.length}</span>`:''} <span class="curbtn" onclick="exportEdits()">✏️ 큐레이션 ${editCount()}</span></h2><div class="sub">태그로 좁혀 보고 카드를 누르면 상세. 상세에서 <b>제외/썸네일 교체</b> 가능 (변경은 내 브라우저에 저장 → ✏️로 내보내 영구반영). (RRA 2020~2026)</div>
    <div class="filters">
+     <div class="frow catrow"><span class="lab">제품군</span>${cats.map(c=>`<span class="chip" data-k="cat" data-v="${c}" style="border-left:3px solid ${catColor[c]||'#16181d'}">${c}</span>`).join('')}</div>
      <div class="frow"><span class="lab">검색</span><input id="searchbox" placeholder="모델·기기명 검색" oninput="flt.q=this.value;paintG()"></div>
      <div class="frow"><span class="lab">브랜드</span>${brand_order.map(b=>`<span class="chip" data-k="brand" data-v="${b}">${b}</span>`).join('')}</div>
-     <div class="frow"><span class="lab">제품군</span>${cats.map(c=>`<span class="chip" data-k="cat" data-v="${c}">${c}</span>`).join('')}</div>
      <div class="frow"><span class="lab">제조사</span>${makers.map(m=>`<span class="chip" data-k="maker" data-v="${m}">${m}</span>`).join('')}</div>
      <div class="frow"><span class="lab">연도</span>${years.map(y=>`<span class="chip" data-k="year" data-v="${y}">${y}</span>`).join('')}</div>
    </div>
